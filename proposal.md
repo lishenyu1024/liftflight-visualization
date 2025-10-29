@@ -1,32 +1,30 @@
-# Project Name
-Housing Impact Dashboard
+# ProjectName
+FlightPath Optimizer
 
 # Story
-
-We're building a dashboard that lets QHC leaders see what's happening in real-time—how many families they're serving, what help people need most, and how staff are doing—all at a glance, empowering them to make data-driven decisions and respond quickly to emerging needs.
+We are prototyping a sophisticated predictive analytics platform that will empower LifeFlight to strategically **forecast emergency medical demand** over a 5-10 year horizon and model **optimal resource allocation scenarios** (such as new base locations) to save more lives and ensure equitable service coverage.
 
 # Stakeholder
-Quality Housing Coalition (QHC), Executive Director（depending）
+Dan Koloski (Initial Contact), LifeFlight Staff (Eventual Users)
 
 ---
 
 # Team
 ## Members
 - [Shenyu Li] (Team Lead)
-- [Yantong Guo][github: TT5650 ]
+- [Yantong Guo]
 
 ## Repo
 https://github.com/nudataviz/project-fall25-lishenyu1024
 
 ## Repo access
-✅ Team lead is working with the instructor to ensure all members have access via GitHub Classroom team management. 
+✅ Team lead is working with the instructor to ensure all members have access via GitHub Classroom team management.
 
 ---
 
 # Data
 ## Describe
-We will use an API data extract from QHC's new Bonterra Apricot case management system, which contains household intake, housing placement, and demographic data for roughly 400-500 client records over two years.
+We will use historical and current **LifeFlight operational data** (including transport volume, patient origin/destination, asset utilization) combined with **external factors** (weather, hospital closures, demographic shifts) to train predictive models and execute scenario simulations.
 
 ## Link / Risks
-The data will be available via API after QHC's go-live date (target 10/10). The primary risk is a project delay if the Apricot system implementation is postponed, potentially impacting the full-term course timeline.
-https://www.bonterratech.com/
+The core data is currently available in a **SharePoint** repository accessible via Dan Koloski. The primary risk is the **complexity of integrating and synthesizing diverse external datasets** (e.g., population projections, weather data) required for accurate long-term **5-10 year forecasting** and variable 'what-if' modeling.
