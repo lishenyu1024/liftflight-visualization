@@ -12,6 +12,8 @@ from utils.predicting.predict_demand import predict_demand as forecast_demand
 from utils.seasonality_1_2 import get_seasonality_heatmap
 from utils.demographics_1_3 import get_demographics_elasticity
 from utils.event_impact_1_4 import get_event_impact_analysis, get_all_events
+from utils.weather_risk_2_4 import get_weather_risk_analysis
+from utils.scenario_whatif_2_1 import simulate_scenario, get_base_locations, compare_scenarios
 
 app = Flask(__name__)
 
@@ -524,6 +526,208 @@ def get_events_api():
         return jsonify({
             'status': 'error',
             'message': f'Failed to get events: {str(e)}'
+        }), 500
+
+@app.route('/api/scenario_simulate', methods=['POST'])
+def simulate_scenario_api():
+    """
+    Simulate a what-if scenario (Chart 2.1).
+    
+    Request body:
+    {
+        "fleet_size": int,
+        "crews_per_vehicle": int,
+        "base_locations": ["BANGOR", "PORTLAND", ...],
+        "service_radius_miles": float,
+        "sla_target_minutes": int
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Request body is required'
+            }), 400
+        
+        fleet_size = int(data.get('fleet_size', 3))
+        crews_per_vehicle = int(data.get('crews_per_vehicle', 2))
+        base_locations = data.get('base_locations', ['BANGOR'])
+        service_radius_miles = float(data.get('service_radius_miles', 50.0))
+        sla_target_minutes = int(data.get('sla_target_minutes', 20))
+        
+        if fleet_size < 1 or fleet_size > 20:
+            return jsonify({
+                'status': 'error',
+                'message': 'fleet_size must be between 1 and 20'
+            }), 400
+        
+        if crews_per_vehicle < 1 or crews_per_vehicle > 5:
+            return jsonify({
+                'status': 'error',
+                'message': 'crews_per_vehicle must be between 1 and 5'
+            }), 400
+        
+        if service_radius_miles < 10 or service_radius_miles > 200:
+            return jsonify({
+                'status': 'error',
+                'message': 'service_radius_miles must be between 10 and 200'
+            }), 400
+        
+        if sla_target_minutes < 5 or sla_target_minutes > 60:
+            return jsonify({
+                'status': 'error',
+                'message': 'sla_target_minutes must be between 5 and 60'
+            }), 400
+        
+        result = simulate_scenario(
+            fleet_size=fleet_size,
+            crews_per_vehicle=crews_per_vehicle,
+            base_locations=base_locations,
+            service_radius_miles=service_radius_miles,
+            sla_target_minutes=sla_target_minutes
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'data': result
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Invalid parameter: {str(e)}'
+        }), 400
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to simulate scenario: {str(e)}'
+        }), 500
+
+
+@app.route('/api/base_locations', methods=['GET'])
+def get_base_locations_api():
+    """
+    Get list of available base locations.
+    """
+    try:
+        bases = get_base_locations()
+        return jsonify({
+            'status': 'success',
+            'data': bases
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to get base locations: {str(e)}'
+        }), 500
+
+
+@app.route('/api/scenario_compare', methods=['POST'])
+def compare_scenarios_api():
+    """
+    Compare multiple scenarios (Chart 2.1).
+    
+    Request body:
+    {
+        "scenarios": [
+            {
+                "fleet_size": int,
+                "crews_per_vehicle": int,
+                "base_locations": [...],
+                "service_radius_miles": float,
+                "sla_target_minutes": int
+            },
+            ...
+        ]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'scenarios' not in data:
+            return jsonify({
+                'status': 'error',
+                'message': 'scenarios array is required'
+            }), 400
+        
+        scenarios_list = data['scenarios']
+        
+        if len(scenarios_list) < 1:
+            return jsonify({
+                'status': 'error',
+                'message': 'At least one scenario is required'
+            }), 400
+        
+        # Simulate all scenarios
+        simulated_scenarios = []
+        for scenario_params in scenarios_list:
+            result = simulate_scenario(
+                fleet_size=int(scenario_params.get('fleet_size', 3)),
+                crews_per_vehicle=int(scenario_params.get('crews_per_vehicle', 2)),
+                base_locations=scenario_params.get('base_locations', ['BANGOR']),
+                service_radius_miles=float(scenario_params.get('service_radius_miles', 50.0)),
+                sla_target_minutes=int(scenario_params.get('sla_target_minutes', 20))
+            )
+            simulated_scenarios.append(result)
+        
+        # Compare scenarios
+        comparison = compare_scenarios(simulated_scenarios)
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'comparison': comparison,
+                'scenarios': simulated_scenarios
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to compare scenarios: {str(e)}'
+        }), 500
+
+@app.route('/api/weather_risk', methods=['GET'])
+def get_weather_risk_api():
+    """
+    Get weather-driven risk analysis data (Chart 2.4).
+    
+    Query parameters:
+    - method: Method to define extreme weather ('precipitation', 'temperature', 'combined') (default: 'precipitation')
+    - aggregation_level: Level to aggregate missions ('day', 'month', 'week') (default: 'day')
+    """
+    try:
+        method = request.args.get('method', 'precipitation')
+        aggregation_level = request.args.get('aggregation_level', 'day')
+        
+        if method not in ['precipitation', 'temperature', 'combined']:
+            return jsonify({
+                'status': 'error',
+                'message': 'method must be precipitation, temperature, or combined'
+            }), 400
+        
+        if aggregation_level not in ['day', 'month', 'week']:
+            return jsonify({
+                'status': 'error',
+                'message': 'aggregation_level must be day, month, or week'
+            }), 400
+        
+        result = get_weather_risk_analysis(
+            method=method,
+            aggregation_level=aggregation_level
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'data': result
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to get weather risk data: {str(e)}'
         }), 500
 
 @app.route('/api/test', methods=['GET'])
