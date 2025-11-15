@@ -11,6 +11,7 @@ from utils.veh_count import calculate_veh_count
 from utils.predicting.predict_demand import predict_demand as forecast_demand
 from utils.seasonality_1_2 import get_seasonality_heatmap
 from utils.demographics_1_3 import get_demographics_elasticity
+from utils.event_impact_1_4 import get_event_impact_analysis, get_all_events
 
 app = Flask(__name__)
 
@@ -446,6 +447,83 @@ def get_demographics_elasticity_api():
         return jsonify({
             'status': 'error',
             'message': f'Failed to get demographics elasticity data: {str(e)}'
+        }), 500
+
+@app.route('/api/event_impact', methods=['GET'])
+def get_event_impact_api():
+    """
+    Get event impact analysis data (Chart 1.4).
+    
+    Query parameters:
+    - event_id: Event identifier (required)
+    - location_level: 'county', 'city', or 'system' (default: 'county')
+    - location_value: Specific location value (optional)
+    - window_months: Number of months before and after event (default: 12)
+    """
+    try:
+        event_id = request.args.get('event_id', None)
+        
+        if not event_id:
+            return jsonify({
+                'status': 'error',
+                'message': 'event_id is required'
+            }), 400
+        
+        location_level = request.args.get('location_level', 'county')
+        location_value = request.args.get('location_value', None)
+        window_months = int(request.args.get('window_months', 12))
+        
+        if location_level not in ['county', 'city', 'system']:
+            return jsonify({
+                'status': 'error',
+                'message': 'location_level must be county, city, or system'
+            }), 400
+        
+        if window_months < 1 or window_months > 24:
+            return jsonify({
+                'status': 'error',
+                'message': 'window_months must be between 1 and 24'
+            }), 400
+        
+        result = get_event_impact_analysis(
+            event_id=event_id,
+            location_level=location_level,
+            location_value=location_value,
+            window_months=window_months
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'data': result
+        })
+        
+    except ValueError as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Invalid parameter: {str(e)}'
+        }), 400
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to get event impact data: {str(e)}'
+        }), 500
+
+
+@app.route('/api/events', methods=['GET'])
+def get_events_api():
+    """
+    Get list of all available events for the event picker.
+    """
+    try:
+        events = get_all_events()
+        return jsonify({
+            'status': 'success',
+            'data': events
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to get events: {str(e)}'
         }), 500
 
 @app.route('/api/test', methods=['GET'])

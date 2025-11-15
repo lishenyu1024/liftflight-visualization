@@ -229,7 +229,6 @@ def aggregate_county_data(
         end_year_for_growth = year
     
     # Extract year from dates
-    df = df.copy()
     df['tdate'] = pd.to_datetime(df['tdate'], errors='coerce')
     df['year'] = df['tdate'].dt.year
     df = df[df['year'] == year]
@@ -241,7 +240,7 @@ def aggregate_county_data(
         'SAGADAHOC', 'SOMERSET', 'WALDO', 'WASHINGTON', 'YORK'
     ]
     
-    df.loc[:, 'PU City.1'] = df['PU City.1'].str.upper()
+    df['PU City.1'] = df['PU City.1'].str.upper()
     df = df[df['PU City.1'].isin(maine_counties)]
     
     # Aggregate by county
@@ -516,7 +515,7 @@ def get_demographics_elasticity(
         x_range = np.linspace(x_min, x_max, 50)
         
         coef = regression_results['coefficients']
-        intercept = coef.get('intercept', coef.get('const', 0))
+        intercept = coef.get('intercept', 0)
         pct_65plus_coef = coef.get('pct_65plus', 0)
         growth_coef = coef.get('growth_rate', 0)
         
@@ -541,3 +540,4 @@ def get_demographics_elasticity(
             'independent_vars': independent_vars
         }
     }
+
