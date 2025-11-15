@@ -110,7 +110,7 @@ const DemographicsElasticity = () => {
       result.push({
         id: 'Counties',
         data: scatterPoints,
-        color: '#1976d2'
+        color: colors.blueAccent[500]
       });
     }
     
@@ -119,7 +119,7 @@ const DemographicsElasticity = () => {
       result.push({
         id: 'Regression Fit',
         data: fittedLine,
-        color: '#dc004e'
+        color: colors.redAccent[500]
       });
     }
     
@@ -161,28 +161,40 @@ const DemographicsElasticity = () => {
   
   return (
     <Box m="20px" sx={{ mt: "0px" }}>
-      <Typography variant="h3" sx={{ mb: "10px", color: '#000000' }}>
+      <Typography variant="h3" sx={{ mb: "10px", color: colors.grey[100] }}>
         1.3 Demographics vs. Demand Elasticity
       </Typography>
-      <Typography variant="h6" sx={{ mb: "10px", color: '#333333' }}>
+      <Typography variant="h6" sx={{ mb: "10px", color: colors.grey[300] }}>
         Demographics vs. Demand Elasticity - County-level regression analysis
       </Typography>
-      <Typography variant="body2" sx={{ mb: "20px", color: '#666666', fontStyle: 'italic' }}>
+      <Typography variant="body2" sx={{ mb: "20px", color: colors.grey[400], fontStyle: 'italic' }}>
         This chart analyzes the relationship between demographic factors (65+ share, population growth rate)
         and emergency medical demand elasticity at the county level. It shows scatter plots with regression fit lines,
         elasticity coefficients with confidence intervals, and marginal effects by cohort (geriatrics, pediatrics, trauma).
       </Typography>
       
       {/* Controls */}
-      <Paper sx={{ p: 3, mb: 3, backgroundColor: '#ffffff', border: '1px solid #e0e0e0' }}>
+      <Paper sx={{ p: 3, mb: 3, backgroundColor: colors.primary[400] }}>
         <Grid container spacing={3} alignItems="center">
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Year</InputLabel>
+              <InputLabel sx={{ color: colors.grey[100] }}>Year</InputLabel>
               <Select
                 value={year}
                 label="Year"
                 onChange={(e) => setYear(e.target.value)}
+                sx={{
+                  color: colors.grey[100],
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: colors.grey[100],
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: colors.grey[100],
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: colors.grey[100],
+                  },
+                }}
               >
                 {availableYears.map(y => (
                   <MenuItem key={y} value={y}>{y}</MenuItem>
@@ -193,11 +205,23 @@ const DemographicsElasticity = () => {
           
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>X-Axis Variable</InputLabel>
+              <InputLabel sx={{ color: colors.grey[100] }}>X-Axis Variable</InputLabel>
               <Select
                 value={xVariable}
                 label="X-Axis Variable"
                 onChange={(e) => setXVariable(e.target.value)}
+                sx={{
+                  color: colors.grey[100],
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: colors.grey[100],
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: colors.grey[100],
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: colors.grey[100],
+                  },
+                }}
               >
                 <MenuItem value="pct_65plus">65+ Population Share (%)</MenuItem>
                 <MenuItem value="growth_rate">Population Growth Rate (%)</MenuItem>
@@ -228,21 +252,21 @@ const DemographicsElasticity = () => {
           {data.regression_results && (
             <Grid container spacing={2} sx={{ mb: 3 }}>
               <Grid item xs={12} md={3}>
-                <Paper sx={{ p: 2, backgroundColor: '#ffffff', textAlign: 'center', border: '1px solid #e0e0e0' }}>
-                  <Typography variant="h6" sx={{ color: '#000000', mb: 1 }}>
+                <Paper sx={{ p: 2, backgroundColor: colors.primary[400], textAlign: 'center' }}>
+                  <Typography variant="h6" sx={{ color: colors.grey[100], mb: 1 }}>
                     R-squared
                   </Typography>
-                  <Typography variant="h4" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                  <Typography variant="h4" sx={{ color: colors.greenAccent[400], fontWeight: 'bold' }}>
                     {data.regression_results.r_squared.toFixed(4)}
                   </Typography>
                 </Paper>
               </Grid>
               <Grid item xs={12} md={3}>
-                <Paper sx={{ p: 2, backgroundColor: '#ffffff', textAlign: 'center', border: '1px solid #e0e0e0' }}>
-                  <Typography variant="h6" sx={{ color: '#000000', mb: 1 }}>
+                <Paper sx={{ p: 2, backgroundColor: colors.primary[400], textAlign: 'center' }}>
+                  <Typography variant="h6" sx={{ color: colors.grey[100], mb: 1 }}>
                     Counties Analyzed
                   </Typography>
-                  <Typography variant="h4" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                  <Typography variant="h4" sx={{ color: colors.blueAccent[400], fontWeight: 'bold' }}>
                     {data.metadata?.n_counties || 0}
                   </Typography>
                 </Paper>
@@ -251,11 +275,11 @@ const DemographicsElasticity = () => {
                 <>
                   {data.regression_results.coefficients.pct_65plus !== undefined && (
                     <Grid item xs={12} md={3}>
-                      <Paper sx={{ p: 2, backgroundColor: '#ffffff', textAlign: 'center', border: '1px solid #e0e0e0' }}>
-                        <Typography variant="h6" sx={{ color: '#000000', mb: 1 }}>
+                      <Paper sx={{ p: 2, backgroundColor: colors.primary[400], textAlign: 'center' }}>
+                        <Typography variant="h6" sx={{ color: colors.grey[100], mb: 1 }}>
                           65+ Elasticity
                         </Typography>
-                        <Typography variant="h4" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                        <Typography variant="h4" sx={{ color: colors.redAccent[400], fontWeight: 'bold' }}>
                           {data.regression_results.coefficients.pct_65plus.toFixed(4)}
                         </Typography>
                       </Paper>
@@ -263,11 +287,11 @@ const DemographicsElasticity = () => {
                   )}
                   {data.regression_results.coefficients.growth_rate !== undefined && (
                     <Grid item xs={12} md={3}>
-                      <Paper sx={{ p: 2, backgroundColor: '#ffffff', textAlign: 'center', border: '1px solid #e0e0e0' }}>
-                        <Typography variant="h6" sx={{ color: '#000000', mb: 1 }}>
+                      <Paper sx={{ p: 2, backgroundColor: colors.primary[400], textAlign: 'center' }}>
+                        <Typography variant="h6" sx={{ color: colors.grey[100], mb: 1 }}>
                           Growth Rate Elasticity
                         </Typography>
-                        <Typography variant="h4" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                        <Typography variant="h4" sx={{ color: colors.yellowAccent?.[400] || colors.blueAccent[400], fontWeight: 'bold' }}>
                           {data.regression_results.coefficients.growth_rate.toFixed(4)}
                         </Typography>
                       </Paper>
@@ -279,19 +303,19 @@ const DemographicsElasticity = () => {
           )}
           
           {/* Tabs for different views */}
-          <Paper sx={{ p: 3, backgroundColor: '#ffffff', mb: 3, border: '1px solid #e0e0e0' }}>
+          <Paper sx={{ p: 3, backgroundColor: colors.primary[400], mb: 3 }}>
             <Tabs
               value={tabValue}
               onChange={(e, newValue) => setTabValue(newValue)}
               sx={{
                 '& .MuiTab-root': {
-                  color: '#666666',
+                  color: colors.grey[300],
                   '&.Mui-selected': {
-                    color: '#1976d2',
+                    color: colors.blueAccent[500],
                   },
                 },
                 '& .MuiTabs-indicator': {
-                  backgroundColor: '#1976d2',
+                  backgroundColor: colors.blueAccent[500],
                 },
               }}
             >
@@ -302,11 +326,11 @@ const DemographicsElasticity = () => {
           
           {/* Scatter Plot Tab */}
           {tabValue === 0 && scatterData && scatterData.length > 0 && (
-            <Paper sx={{ p: 3, backgroundColor: '#ffffff', height: "600px", border: '1px solid #e0e0e0' }}>
-              <Typography variant="h5" sx={{ mb: 2, color: '#000000' }}>
+            <Paper sx={{ p: 3, backgroundColor: colors.primary[400], height: "600px" }}>
+              <Typography variant="h5" sx={{ mb: 2, color: colors.grey[100] }}>
                 Missions per 1,000 Population vs. {getXAxisLabel()}
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2, color: '#666666' }}>
+              <Typography variant="body2" sx={{ mb: 2, color: colors.grey[300] }}>
                 Each point represents a county. The line shows the regression fit.
               </Typography>
               <Box height="500px">
@@ -337,9 +361,9 @@ const DemographicsElasticity = () => {
                     legendPosition: 'middle'
                   }}
                   pointSize={8}
-                  pointColor="#1976d2"
+                  pointColor={{ theme: 'background' }}
                   pointBorderWidth={2}
-                  pointBorderColor="#ffffff"
+                  pointBorderColor={{ from: 'serieColor' }}
                   pointLabelYOffset={-12}
                   useMesh={true}
                   legends={[
@@ -362,30 +386,29 @@ const DemographicsElasticity = () => {
                     axis: {
                       domain: {
                         line: {
-                          stroke: '#000000',
+                          stroke: colors.grey[100],
                           strokeWidth: 1
                         }
                       },
                       legend: {
                         text: {
-                          fill: '#000000'
+                          fill: colors.grey[100]
                         }
                       },
                       ticks: {
                         line: {
-                          stroke: '#000000',
+                          stroke: colors.grey[100],
                           strokeWidth: 1
                         },
                         text: {
-                          fill: '#000000'
+                          fill: colors.grey[100]
                         }
                       }
                     },
                     tooltip: {
                       container: {
-                        background: '#ffffff',
-                        color: '#000000',
-                        border: '1px solid #e0e0e0'
+                        background: colors.primary[500],
+                        color: colors.grey[100]
                       }
                     }
                   }}
@@ -396,11 +419,11 @@ const DemographicsElasticity = () => {
           
           {/* Marginal Effects Tab */}
           {tabValue === 1 && marginalEffectsData && marginalEffectsData.length > 0 && (
-            <Paper sx={{ p: 3, backgroundColor: '#ffffff', height: "500px", border: '1px solid #e0e0e0' }}>
-              <Typography variant="h5" sx={{ mb: 2, color: '#000000' }}>
+            <Paper sx={{ p: 3, backgroundColor: colors.primary[400], height: "500px" }}>
+              <Typography variant="h5" sx={{ mb: 2, color: colors.grey[100] }}>
                 Marginal Effects by Cohort
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2, color: '#666666' }}>
+              <Typography variant="body2" sx={{ mb: 2, color: colors.grey[300] }}>
                 Impact of demographic factors on demand by patient cohort
               </Typography>
               <Box height="400px">
@@ -438,30 +461,29 @@ const DemographicsElasticity = () => {
                     axis: {
                       domain: {
                         line: {
-                          stroke: '#000000',
+                          stroke: colors.grey[100],
                           strokeWidth: 1
                         }
                       },
                       legend: {
                         text: {
-                          fill: '#000000'
+                          fill: colors.grey[100]
                         }
                       },
                       ticks: {
                         line: {
-                          stroke: '#000000',
+                          stroke: colors.grey[100],
                           strokeWidth: 1
                         },
                         text: {
-                          fill: '#000000'
+                          fill: colors.grey[100]
                         }
                       }
                     },
                     tooltip: {
                       container: {
-                        background: '#ffffff',
-                        color: '#000000',
-                        border: '1px solid #e0e0e0'
+                        background: colors.primary[500],
+                        color: colors.grey[100]
                       }
                     }
                   }}
@@ -470,20 +492,20 @@ const DemographicsElasticity = () => {
               
               {/* Correlation table */}
               <Box mt={3}>
-                <Typography variant="h6" sx={{ mb: 2, color: '#000000' }}>
+                <Typography variant="h6" sx={{ mb: 2, color: colors.grey[100] }}>
                   Correlation Coefficients
                 </Typography>
                 <Grid container spacing={2}>
                   {marginalEffectsData.map((item) => (
                     <Grid item xs={12} md={4} key={item.cohort}>
-                      <Paper sx={{ p: 2, backgroundColor: '#f5f5f5', border: '1px solid #e0e0e0' }}>
-                        <Typography variant="body1" sx={{ color: '#000000', fontWeight: 'bold' }}>
+                      <Paper sx={{ p: 2, backgroundColor: colors.primary[500] }}>
+                        <Typography variant="body1" sx={{ color: colors.grey[100], fontWeight: 'bold' }}>
                           {item.cohort}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#666666' }}>
+                        <Typography variant="body2" sx={{ color: colors.grey[300] }}>
                           Correlation: {item.correlation.toFixed(4)}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#666666' }}>
+                        <Typography variant="body2" sx={{ color: colors.grey[300] }}>
                           Mean Burden: {item.mean.toFixed(2)}%
                         </Typography>
                       </Paper>
@@ -500,3 +522,4 @@ const DemographicsElasticity = () => {
 };
 
 export default DemographicsElasticity;
+
