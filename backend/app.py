@@ -20,6 +20,8 @@ from utils.demographics_1_3 import get_demographics_elasticity
 from utils.event_impact_1_4 import get_event_impact_analysis, get_all_events
 from utils.weather_risk_2_4 import get_weather_risk_analysis
 from utils.scenario_whatif_2_1 import simulate_scenario, get_base_locations, compare_scenarios
+from utils.pareto_sensitivity_2_3 import get_pareto_sensitivity_analysis
+from utils.base_siting_2_2 import get_base_siting_analysis
 
 app = Flask(__name__)
 
@@ -763,6 +765,126 @@ def compare_scenarios_api():
         return jsonify({
             'status': 'error',
             'message': f'Failed to compare scenarios: {str(e)}'
+        }), 500
+
+@app.route('/api/pareto_sensitivity', methods=['GET', 'POST'])
+def get_pareto_sensitivity_api():
+    """
+    Get Pareto sensitivity analysis data (Chart 2.3).
+    
+    Query parameters (GET) or JSON body (POST):
+    - base_locations: List of base location names (optional)
+    - radius_min: Minimum service radius (default: 20)
+    - radius_max: Maximum service radius (default: 100)
+    - radius_step: Step size for radius (default: 10)
+    - sla_min: Minimum SLA target (default: 10)
+    - sla_max: Maximum SLA target (default: 30)
+    - sla_step: Step size for SLA (default: 5)
+    - fleet_size: Fleet size (default: 3)
+    - crews_per_vehicle: Crews per vehicle (default: 2)
+    - weights: Optional weights dict {'population': float, 'sla': float, 'cost': float}
+    """
+    try:
+        if request.method == 'POST':
+            data = request.get_json() or {}
+        else:
+            data = request.args.to_dict()
+        
+        base_locations = data.get('base_locations')
+        if isinstance(base_locations, str):
+            # Parse comma-separated string
+            base_locations = [b.strip() for b in base_locations.split(',')]
+        
+        radius_min = float(data.get('radius_min', 20))
+        radius_max = float(data.get('radius_max', 100))
+        radius_step = float(data.get('radius_step', 10))
+        sla_min = int(data.get('sla_min', 10))
+        sla_max = int(data.get('sla_max', 30))
+        sla_step = int(data.get('sla_step', 5))
+        fleet_size = int(data.get('fleet_size', 3))
+        crews_per_vehicle = int(data.get('crews_per_vehicle', 2))
+        
+        weights = data.get('weights')
+        if isinstance(weights, dict):
+            # Ensure weights sum to 1.0
+            total = sum(weights.values())
+            if total > 0:
+                weights = {k: v / total for k, v in weights.items()}
+        
+        result = get_pareto_sensitivity_analysis(
+            base_locations=base_locations,
+            radius_min=radius_min,
+            radius_max=radius_max,
+            radius_step=radius_step,
+            sla_min=sla_min,
+            sla_max=sla_max,
+            sla_step=sla_step,
+            fleet_size=fleet_size,
+            crews_per_vehicle=crews_per_vehicle,
+            weights=weights
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'data': result
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to get Pareto sensitivity analysis: {str(e)}'
+        }), 500
+
+@app.route('/api/base_siting', methods=['POST'])
+def get_base_siting_api():
+    """
+    Get base siting coverage map analysis (Chart 2.2).
+    
+    Request body:
+    {
+        "existing_bases": ["BANGOR", "PORTLAND"],
+        "candidate_base": {
+            "name": "LEWISTON",
+            "latitude": 44.1004,
+            "longitude": -70.2148
+        } (optional),
+        "service_radius_miles": 50.0,
+        "sla_target_minutes": 20,
+        "fleet_size": 3,
+        "crews_per_vehicle": 2,
+        "coverage_threshold_minutes": 20
+    }
+    """
+    try:
+        data = request.get_json() or {}
+        
+        existing_bases = data.get('existing_bases', ['BANGOR'])
+        candidate_base = data.get('candidate_base')
+        service_radius_miles = float(data.get('service_radius_miles', 50.0))
+        sla_target_minutes = int(data.get('sla_target_minutes', 20))
+        fleet_size = int(data.get('fleet_size', 3))
+        crews_per_vehicle = int(data.get('crews_per_vehicle', 2))
+        coverage_threshold_minutes = int(data.get('coverage_threshold_minutes', 20))
+        
+        result = get_base_siting_analysis(
+            existing_bases=existing_bases,
+            candidate_base=candidate_base,
+            service_radius_miles=service_radius_miles,
+            sla_target_minutes=sla_target_minutes,
+            fleet_size=fleet_size,
+            crews_per_vehicle=crews_per_vehicle,
+            coverage_threshold_minutes=coverage_threshold_minutes
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'data': result
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to get base siting analysis: {str(e)}'
         }), 500
 
 @app.route('/api/weather_risk', methods=['GET'])
