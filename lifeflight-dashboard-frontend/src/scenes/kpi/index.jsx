@@ -4,6 +4,7 @@ import KPIBullets from "../../components/4.1KPIBullets";
 import TrendWall from "../../components/4.2TrendWall";
 import CostBenefitThroughput from "../../components/4.3CostBenefitThroughput";
 import SafetySPC from "../../components/4.4SafetySPC";
+
 export default function KPIDashboard() {
   return (
     <Box m="20px">

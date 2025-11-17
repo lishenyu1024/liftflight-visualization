@@ -8,13 +8,7 @@ from utils.heatmap import generate_city_demand_heatmap, map_to_html
 from utils.getData import read_data
 from utils.responseTime import calculate_response_time
 from utils.veh_count import calculate_veh_count
-from utils.predicting.predict_demand import (
-    predict_demand as forecast_demand,
-    prophet_predict,
-    prepare_prophet_data,
-    extract_forecast_data,
-    cross_validate_prophet
-)
+from utils.predicting.predict_demand import predict_demand as forecast_demand
 from utils.seasonality_1_2 import get_seasonality_heatmap
 from utils.demographics_1_3 import get_demographics_elasticity
 from utils.event_impact_1_4 import get_event_impact_analysis, get_all_events
@@ -181,7 +175,7 @@ def get_hourly_departure():
     })
 
 
-# 1.1 Predict Demand
+
 @app.route('/api/predict_demand', methods=['POST'])
 def predict_demand():
     try:
@@ -228,77 +222,7 @@ def predict_demand():
             'status': 'error',
             'message': f'Prediction failed: {str(e)}'
         }), 500
-    
 
-@app.route('/api/predict_demand_v2', methods=['POST'])
-def predict_demand_v2():
-    """新的 Prophet 预测接口，支持自定义参数和额外变量"""
-    from pathlib import Path
-    
-    # 获取请求参数
-    data = request.get_json() or {}
-    
-    # 模型参数
-    periods = 12  # 预测窗口写死为12个月
-    extra_vars = data.get('extra_vars', [])  # 额外变量列表
-    growth = data.get('growth', 'linear')
-    yearly_seasonality = data.get('yearly_seasonality', True)
-    weekly_seasonality = data.get('weekly_seasonality', False)
-    daily_seasonality = data.get('daily_seasonality', False)
-    seasonality_mode = data.get('seasonality_mode', 'additive')
-    changepoint_prior_scale = float(data.get('changepoint_prior_scale', 0.05))
-    seasonality_prior_scale = float(data.get('seasonality_prior_scale', 10.0))
-    interval_width = float(data.get('interval_width', 0.95))
-    regressor_prior_scale = float(data.get('regressor_prior_scale', 0.05))
-    regressor_mode = data.get('regressor_mode', 'additive')
-    
-    # 获取后端目录路径
-    backend_dir = Path(__file__).parent
-    
-    # 直接读取数据文件
-    data_path = backend_dir / 'data' / '1_demand_forecasting' / 'predict_data_v1.csv'
-    prophet_data = pd.read_csv(data_path)
-    prophet_data['date'] = pd.to_datetime(prophet_data['date'])
-    
-    # 训练模型并预测
-    forecast, model, train_data = prophet_predict(
-        data=prophet_data,
-        freq='M',
-        extra_vars=extra_vars,
-        periods=periods,
-        growth=growth,
-        yearly_seasonality=yearly_seasonality,
-        weekly_seasonality=weekly_seasonality,
-        daily_seasonality=daily_seasonality,
-        seasonality_mode=seasonality_mode,
-        changepoint_prior_scale=changepoint_prior_scale,
-        seasonality_prior_scale=seasonality_prior_scale,
-        interval_width=interval_width,
-        regressor_prior_scale=regressor_prior_scale,
-        regressor_mode=regressor_mode
-    )
-    
-    # 提取预测数据和组件
-    extracted_data = extract_forecast_data(forecast, train_data)
-    # 交叉验证
-    cv_metrics = cross_validate_prophet(model, train_data)
-    
-    # 返回结果
-    return jsonify({
-        'status': 'success',
-        'data': {
-            'forecast_data': extracted_data['forecast_data'],
-            'historical_actual': extracted_data['historical_actual'],
-            'components': extracted_data['components'],
-            'cv_metrics': cv_metrics
-        }
-    })
-
-
-
-
-
-    
 @app.route('/api/seasonality_heatmap', methods=['GET'])
 def get_seasonality_heatmap_api():
     """
@@ -1045,16 +969,19 @@ def get_safety_spc_api():
         end_year = int(request.args.get('end_year', 2023))
         aggregation = request.args.get('aggregation', 'month')
         method = request.args.get('method', '3sigma')
+        
         result = get_safety_spc_data(
             start_year=start_year,
             end_year=end_year,
             aggregation=aggregation,
             method=method
         )
+        
         return jsonify({
             'status': 'success',
             'data': result
         })
+        
     except Exception as e:
         return jsonify({
             'status': 'error',
