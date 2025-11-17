@@ -15,21 +15,30 @@ import {
   Paper,
   Grid,
   Tabs,
-  Tab
+  Tab,
+  Autocomplete,
+  Chip
 } from '@mui/material';
 import { useTheme } from '@mui/material';
 import { tokens } from '../theme';
 import { ResponsiveLine } from "@nivo/line";
-import { useMemo } from 'react';
+import { ResponsiveBar } from "@nivo/bar";
+import { useMemo, useEffect } from 'react';
 
 // 可用的额外变量
 const AVAILABLE_EXTRA_VARS = [
+  'age_under_5_ratio',
+  'age_5_9_ratio',
+  'age_10_19_ratio',
+  'age_20_29_ratio',
+  'age_30_39_ratio',
+  'age_40_49_ratio',
+  'age_50_59_ratio',
   'age_60_69_ratio',
-  'total_population',
-  'age_60_69',
-  'age_70_79',
-  'age_80_84',
-  'age_85_plus'
+  'age_70_79_ratio',
+  'age_80_84_ratio',
+  'age_85_plus_ratio',
+  'total_population'
 ];
 
 export default function PredictDemand() {
@@ -44,10 +53,89 @@ export default function PredictDemand() {
   const [changepointPriorScale, setChangepointPriorScale] = useState(0.05);
   const [seasonalityPriorScale, setSeasonalityPriorScale] = useState(10.0);
   const [regressorPriorScale, setRegressorPriorScale] = useState(0.05);
+  const [intervalWidth, setIntervalWidth] = useState(0.95);
+  const [periods, setPeriods] = useState(1); 
+  const [regressorMode, setRegressorMode] = useState('additive');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [tabValue, setTabValue] = useState(0);
+  const [corrMatrix, setCorrMatrix] = useState(null);
+  const [showCorrMatrix, setShowCorrMatrix] = useState(false);
+  const [loadingCorr, setLoadingCorr] = useState(false);
+
+  // Fetch correlation matrix
+  useEffect(() => {
+    const fetchCorrMatrix = async () => {
+      setLoadingCorr(true);
+      try {
+        const response = await fetch('http://localhost:5001/api/get_corr_matrix');
+        const data = await response.json();
+        if (data.status === 'success') {
+          console.log('Correlation matrix data:', data.data);
+          setCorrMatrix(data.data);
+        } else {
+          console.error('Failed to load correlation matrix:', data.message);
+        }
+      } catch (err) {
+        console.error('Failed to fetch correlation matrix:', err);
+      } finally {
+        setLoadingCorr(false);
+      }
+    };
+    fetchCorrMatrix();
+  }, []);
+
+  // Helper function to simplify variable names
+  const simplifyVarName = (varName) => {
+    const nameMap = {
+      'age_under_5_ratio': '<5',
+      'age_5_9_ratio': '5-9',
+      'age_10_19_ratio': '10-19',
+      'age_20_29_ratio': '20-29',
+      'age_30_39_ratio': '30-39',
+      'age_40_49_ratio': '40-49',
+      'age_50_59_ratio': '50-59',
+      'age_60_69_ratio': '60-69',
+      'age_70_79_ratio': '70-79',
+      'age_80_84_ratio': '80-84',
+      'age_85_plus_ratio': '85+',
+      'total_population': 'total'
+    };
+    return nameMap[varName] || varName;
+  };
+
+  // Helper function to validate and clamp numeric values
+  const validateNumericInput = (value, min, max, defaultValue) => {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(numValue)) {
+      return defaultValue;
+    }
+    if (numValue < min) {
+      return min;
+    }
+    if (numValue > max) {
+      return max;
+    }
+    return numValue;
+  };
+
+  // Reset all parameters to default values
+  const resetParameters = () => {
+    setSelectedExtraVars([]);
+    setGrowth('linear');
+    setYearlySeasonality(true);
+    setSeasonalityMode('additive');
+    setChangepointPriorScale(0.05);
+    setSeasonalityPriorScale(10.0);
+    setRegressorPriorScale(0.05);
+    setIntervalWidth(0.95);
+    setPeriods(1);
+    setRegressorMode('additive');
+    setResult(null);
+    setError(null);
+    setTabValue(0);
+  };
 
   // Fetch prediction data
   const fetchPrediction = async () => {
@@ -70,9 +158,10 @@ export default function PredictDemand() {
           seasonality_mode: seasonalityMode,
           changepoint_prior_scale: changepointPriorScale,
           seasonality_prior_scale: seasonalityPriorScale,
-          interval_width: 0.95,
+          interval_width: intervalWidth,
           regressor_prior_scale: regressorPriorScale,
-          regressor_mode: seasonalityMode
+          regressor_mode: regressorMode,
+          periods: periods*12
         })
       });
       
@@ -169,13 +258,6 @@ export default function PredictDemand() {
     }];
   };
 
-  const handleExtraVarChange = (varName) => {
-    setSelectedExtraVars(prev => 
-      prev.includes(varName)
-        ? prev.filter(v => v !== varName)
-        : [...prev, varName]
-    );
-  };
 
   // Prepare confidence interval area layer
   const ciData = useMemo(() => {
@@ -199,6 +281,38 @@ export default function PredictDemand() {
       lower: lowerData
     };
   }, [result]);
+
+  // Custom Vertical Divider Line - separates actual from predicted data
+  const VerticalDividerLine = useMemo(() => {
+    return ({ xScale, yScale, innerHeight, margin }) => {
+      // Get the last date of actual data
+      let lastActualDate = null;
+      if (result && result.historical_actual && result.historical_actual.length > 0) {
+        const lastActual = result.historical_actual[result.historical_actual.length - 1];
+        lastActualDate = lastActual ? lastActual.date : null;
+      }
+      
+      if (!lastActualDate || !xScale || !yScale) return null;
+
+      const x = xScale(lastActualDate);
+      if (x === undefined || isNaN(x)) return null;
+
+      return (
+        <g>
+          <line
+            x1={x}
+            y1={0}
+            x2={x}
+            y2={innerHeight + margin.top-50}
+            stroke={colors.grey[200]}
+            strokeWidth={2}
+            strokeDasharray="5,5"
+            opacity={0.8}
+          />
+        </g>
+      );
+    };
+  }, [result, colors]);
 
   // Custom Area Layer for confidence interval
   const ConfidenceIntervalArea = useMemo(() => {
@@ -268,11 +382,12 @@ export default function PredictDemand() {
       ConfidenceIntervalArea,
       'areas',
       'lines',
+      VerticalDividerLine, // Add vertical divider after lines
       'points',
       'mesh',
       'legends'
     ];
-  }, [ConfidenceIntervalArea]);
+  }, [ConfidenceIntervalArea, VerticalDividerLine]);
 
   const chartTheme = {
     axis: {
@@ -311,7 +426,7 @@ export default function PredictDemand() {
   return (
     <Box m="20px">
       <Typography variant="h3" sx={{ mb: "10px", color: colors.grey[100] }}>
-        Prophet Model Prediction
+        1.1 Prophet Model Prediction
       </Typography>
       <Typography variant="h6" sx={{ mb: "10px", color: colors.grey[300] }}>
         Advanced Prophet model with customizable parameters and extra regressors
@@ -333,27 +448,242 @@ export default function PredictDemand() {
             <Typography variant="h6" sx={{ mb: 1, color: colors.grey[200] }}>
               Extra Regressors
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {AVAILABLE_EXTRA_VARS.map(varName => (
-                <FormControlLabel
-                  key={varName}
-                  control={
-                    <Checkbox
-                      checked={selectedExtraVars.includes(varName)}
-                      onChange={() => handleExtraVarChange(varName)}
-                      sx={{
+            <Autocomplete
+              multiple
+              options={AVAILABLE_EXTRA_VARS}
+              value={selectedExtraVars}
+              onChange={(event, newValue) => {
+                setSelectedExtraVars(newValue);
+              }}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={option}
+                    label={option}
+                    sx={{
+                      backgroundColor: colors.blueAccent[700],
+                      color: colors.grey[100],
+                      '& .MuiChip-deleteIcon': {
                         color: colors.grey[100],
-                        '&.Mui-checked': {
-                          color: colors.greenAccent[500],
-                        },
-                      }}
-                    />
-                  }
-                  label={varName}
-                  sx={{ color: colors.grey[100] }}
+                      },
+                    }}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Select Variables"
+                  placeholder="Search and select variables"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: colors.grey[100],
+                      '& fieldset': {
+                        borderColor: colors.grey[100],
+                      },
+                      '&:hover fieldset': {
+                        borderColor: colors.grey[100],
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: colors.blueAccent[500],
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: colors.grey[100],
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: colors.blueAccent[500],
+                    },
+                  }}
                 />
-              ))}
-            </Box>
+              )}
+              sx={{
+                '& .MuiAutocomplete-popupIndicator': {
+                  color: colors.grey[100],
+                },
+                '& .MuiAutocomplete-clearIndicator': {
+                  color: colors.grey[100],
+                },
+              }}
+            />
+            <Typography variant="caption" sx={{ mt: 1, color: colors.grey[400], display: 'block' }}>
+              {selectedExtraVars.length} variable(s) selected
+            </Typography>
+            
+            {/* Correlation Matrix Toggle */}
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setShowCorrMatrix(!showCorrMatrix)}
+              sx={{
+                mt: 2,
+                borderColor: colors.grey[300],
+                color: colors.grey[100],
+                '&:hover': {
+                  borderColor: colors.blueAccent[500],
+                  backgroundColor: colors.primary[500],
+                },
+              }}
+            >
+              {showCorrMatrix ? 'Hide' : 'Show'} Correlation Matrix
+            </Button>
+            
+            {/* Correlation with count reference - only show selected variables */}
+            {corrMatrix && corrMatrix.count_correlations && selectedExtraVars.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="caption" sx={{ color: colors.grey[300], display: 'block', mb: 1 }}>
+                  Correlation with Task Count (selected variables):
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selectedExtraVars
+                    .filter(varName => corrMatrix.count_correlations[varName] !== undefined)
+                    .map(varName => {
+                      const corr = corrMatrix.count_correlations[varName];
+                      return (
+                        <Chip
+                          key={varName}
+                          label={`${simplifyVarName(varName)}: ${corr.toFixed(3)}`}
+                          size="small"
+                          sx={{
+                            backgroundColor: corr > 0 ? colors.greenAccent[700] : colors.redAccent[700],
+                            color: colors.grey[100],
+                            fontSize: '0.7rem',
+                          }}
+                        />
+                      );
+                    })}
+                </Box>
+              </Box>
+            )}
+            
+            {/* Correlation with Count Bar Chart */}
+            {showCorrMatrix && corrMatrix && corrMatrix.count_correlations && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, color: colors.grey[200] }}>
+                  Correlation with Task Count
+                </Typography>
+                {loadingCorr ? (
+                  <CircularProgress size={24} />
+                ) : (
+                  <Box sx={{ height: '350px', width: '100%', borderRadius: 1, p: 1 }}>
+                    {(() => {
+                      try {
+                        const correlations = corrMatrix.count_correlations;
+                        const barData = Object.entries(correlations)
+                          .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])) // Sort by absolute value
+                          .map(([varName, value]) => ({
+                            variable: simplifyVarName(varName),
+                            originalVar: varName,
+                            positive: value >= 0 ? value : 0,
+                            negative: value < 0 ? value : 0,
+                            correlation: value
+                          }));
+                        
+                        if (barData.length === 0) {
+                          return <Typography sx={{ color: colors.grey[300] }}>No correlation data available</Typography>;
+                        }
+                        
+                        return (
+                          <ResponsiveBar
+                            data={barData}
+                            keys={['positive', 'negative']}
+                            indexBy="variable"
+                            margin={{ top: 20, right: 30, bottom: 100, left: 60 }}
+                            padding={0.2}
+                            valueScale={{ type: 'linear', min: -1, max: 1 }}
+                            indexScale={{ type: 'band', round: true }}
+                            colors={(d) => {
+                              return d.id === 'positive' 
+                                ? colors.greenAccent[500] 
+                                : colors.redAccent[500];
+                            }}
+                            axisTop={null}
+                            axisRight={null}
+                            axisBottom={{
+                              tickSize: 5,
+                              tickPadding: 5,
+                              tickRotation: -90,
+                              legend: 'Variables',
+                              legendPosition: 'middle',
+                              legendOffset: 60
+                            }}
+                            axisLeft={{
+                              tickSize: 5,
+                              tickPadding: 5,
+                              tickRotation: 0,
+                              legend: 'Correlation Coefficient',
+                              legendPosition: 'middle',
+                              legendOffset: -50,
+                              format: (value) => value.toFixed(2)
+                            }}
+                            enableGridY={true}
+                            enableGridX={false}
+                            enableLabel={false}
+                            animate={true}
+                            motionConfig="gentle"
+                            tooltip={({ id, data }) => {
+                              const value = id === 'positive' ? data.positive : data.negative;
+                              if (value === 0) return null;
+                              return (
+                                <div style={{
+                                  padding: '8px',
+                                  backgroundColor: colors.primary[600],
+                                  color: colors.grey[900],
+                                  borderRadius: '4px',
+                                  fontSize: '12px'
+                                }}>
+                                  <strong>{data.variable}</strong>
+                                  <br />
+                                  Correlation: {data.correlation.toFixed(3)}
+                                </div>
+                              );
+                            }}
+                            theme={{
+                              axis: {
+                                domain: {
+                                  line: {
+                                    stroke: colors.grey[100],
+                                    strokeWidth: 1
+                                  }
+                                },
+                                legend: {
+                                  text: {
+                                    fill: colors.grey[100]
+                                  }
+                                },
+                                ticks: {
+                                  line: {
+                                    stroke: colors.grey[100],
+                                    strokeWidth: 1
+                                  },
+                                  text: {
+                                    fill: colors.grey[100]
+                                  }
+                                }
+                              },
+                              grid: {
+                                line: {
+                                  stroke: colors.grey[700],
+                                  strokeWidth: 1
+                                }
+                              }
+                            }}
+                          />
+                        );
+                      } catch (error) {
+                        console.error('Error rendering bar chart:', error);
+                        return (
+                          <Typography sx={{ color: colors.redAccent[500] }}>
+                            Error rendering chart: {error.message}
+                          </Typography>
+                        );
+                      }
+                    })()}
+                  </Box>
+                )}
+              </Box>
+            )}
           </Grid>
           
           {/* Model Parameters */}
@@ -383,6 +713,38 @@ export default function PredictDemand() {
                     <MenuItem value="logistic">Logistic</MenuItem>
                   </Select>
                 </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Interval Width"
+                  value={intervalWidth}
+                  onChange={(e) => {
+                    const validated = validateNumericInput(e.target.value, 0.5, 0.99, 0.95);
+                    setIntervalWidth(validated);
+                  }}
+                  onBlur={(e) => {
+                    const validated = validateNumericInput(e.target.value, 0.5, 0.99, 0.95);
+                    setIntervalWidth(validated);
+                  }}
+                  inputProps={{ min: 0.5, max: 0.99, step: 0.01 }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: colors.grey[100],
+                      '& fieldset': {
+                        borderColor: colors.grey[100],
+                      },
+                      '&:hover fieldset': {
+                        borderColor: colors.grey[100],
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: colors.grey[100],
+                    },
+                  }}
+                />
               </Grid>
               
               <Grid item xs={12} md={6}>
@@ -417,8 +779,15 @@ export default function PredictDemand() {
                   type="number"
                   label="Changepoint Prior Scale"
                   value={changepointPriorScale}
-                  onChange={(e) => setChangepointPriorScale(parseFloat(e.target.value) || 0.05)}
-                  inputProps={{ min: 0.001, max: 0.5, step: 0.01 }}
+                  onChange={(e) => {
+                    const validated = validateNumericInput(e.target.value, 0.01, 0.5, 0.05);
+                    setChangepointPriorScale(validated);
+                  }}
+                  onBlur={(e) => {
+                    const validated = validateNumericInput(e.target.value, 0.01, 0.5, 0.05);
+                    setChangepointPriorScale(validated);
+                  }}
+                  inputProps={{ min: 0.01, max: 0.5, step: 0.01 }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       color: colors.grey[100],
@@ -442,7 +811,14 @@ export default function PredictDemand() {
                   type="number"
                   label="Seasonality Prior Scale"
                   value={seasonalityPriorScale}
-                  onChange={(e) => setSeasonalityPriorScale(parseFloat(e.target.value) || 10.0)}
+                  onChange={(e) => {
+                    const validated = validateNumericInput(e.target.value, 0.1, 50, 10.0);
+                    setSeasonalityPriorScale(validated);
+                  }}
+                  onBlur={(e) => {
+                    const validated = validateNumericInput(e.target.value, 0.1, 50, 10.0);
+                    setSeasonalityPriorScale(validated);
+                  }}
                   inputProps={{ min: 0.1, max: 50, step: 0.1 }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
@@ -465,9 +841,74 @@ export default function PredictDemand() {
                 <TextField
                   fullWidth
                   type="number"
+                  label="Periods (Years)"
+                  value={periods}
+                  onChange={(e) => {
+                    const validated = validateNumericInput(e.target.value, 1, 10, 1);
+                    setPeriods(Math.round(validated)); // Ensure integer for years
+                  }}
+                  onBlur={(e) => {
+                    const validated = validateNumericInput(e.target.value, 1, 10, 1);
+                    setPeriods(Math.round(validated)); // Ensure integer for years
+                  }}
+                  inputProps={{ min: 1, max: 10, step: 1 }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: colors.grey[100],
+                      '& fieldset': {
+                        borderColor: colors.grey[100],
+                      },
+                      '&:hover fieldset': {
+                        borderColor: colors.grey[100],
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: colors.grey[100],
+                    },
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel sx={{ color: colors.grey[100] }}>Regressor Mode</InputLabel>
+                  <Select
+                    value={regressorMode}
+                    label="Regressor Mode"
+                    onChange={(e) => setRegressorMode(e.target.value)}
+                    sx={{
+                      color: colors.grey[100],
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.grey[100],
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: colors.grey[100],
+                      },
+                      '& .MuiSvgIcon-root': {
+                        color: colors.grey[100],
+                      },
+                    }}
+                  >
+                    <MenuItem value="additive">Additive</MenuItem>
+                    <MenuItem value="multiplicative">Multiplicative</MenuItem>
+                  </Select>
+                  </FormControl>
+                </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  type="number"
                   label="Regressor Prior Scale"
                   value={regressorPriorScale}
-                  onChange={(e) => setRegressorPriorScale(parseFloat(e.target.value) || 0.05)}
+                  onChange={(e) => {
+                    const validated = validateNumericInput(e.target.value, 0.001, 0.5, 0.05);
+                    setRegressorPriorScale(validated);
+                  }}
+                  onBlur={(e) => {
+                    const validated = validateNumericInput(e.target.value, 0.001, 0.5, 0.05);
+                    setRegressorPriorScale(validated);
+                  }}
                   inputProps={{ min: 0.001, max: 0.5, step: 0.01 }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
@@ -508,24 +949,49 @@ export default function PredictDemand() {
           </Grid>
           
           <Grid item xs={12}>
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={fetchPrediction}
-              disabled={loading}
-              sx={{
-                backgroundColor: colors.blueAccent[700],
-                color: colors.grey[100],
-                fontSize: "16px",
-                fontWeight: "bold",
-                padding: "12px 24px",
-                '&:hover': {
-                  backgroundColor: colors.blueAccent[600],
-                },
-              }}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Start Prediction'}
-            </Button>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={8}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={fetchPrediction}
+                  disabled={loading}
+                  sx={{
+                    backgroundColor: colors.blueAccent[700],
+                    color: colors.grey[100],
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    padding: "12px 24px",
+                    '&:hover': {
+                      backgroundColor: colors.blueAccent[600],
+                    },
+                  }}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'Start Prediction'}
+                </Button>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={resetParameters}
+                  disabled={loading}
+                  sx={{
+                    borderColor: colors.grey[300],
+                    color: colors.grey[100],
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    padding: "12px 24px",
+                    '&:hover': {
+                      borderColor: colors.grey[100],
+                      backgroundColor: colors.primary[500],
+                    },
+                  }}
+                >
+                  Reset Parameters
+                </Button>
+              </Grid>
+            </Grid>
           </Grid>
         </Grid>
       </Paper>

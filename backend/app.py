@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import pandas as pd
 import numpy as np
+from pathlib import Path
 from config import config
 from utils.heatmap import generate_city_demand_heatmap, map_to_html
 from utils.getData import read_data
@@ -235,8 +236,8 @@ def predict_demand_v2():
     data = request.get_json() or {}
     
     # 模型参数
-    periods = 12  # 预测窗口写死为12个月
-    extra_vars = data.get('extra_vars', [])  # 额外变量列表
+    periods = int(data.get('periods', 12)) 
+    extra_vars = data.get('extra_vars', [])
     growth = data.get('growth', 'linear')
     yearly_seasonality = data.get('yearly_seasonality', True)
     weekly_seasonality = data.get('weekly_seasonality', False)
@@ -252,7 +253,7 @@ def predict_demand_v2():
     backend_dir = Path(__file__).parent
     
     # 直接读取数据文件
-    data_path = backend_dir / 'data' / '1_demand_forecasting' / 'predict_data_v1.csv'
+    data_path = backend_dir / 'data' / '1_demand_forecasting' / '1_1_history_data_v2.csv'
     prophet_data = pd.read_csv(data_path)
     prophet_data['date'] = pd.to_datetime(prophet_data['date'])
     
@@ -271,7 +272,8 @@ def predict_demand_v2():
         seasonality_prior_scale=seasonality_prior_scale,
         interval_width=interval_width,
         regressor_prior_scale=regressor_prior_scale,
-        regressor_mode=regressor_mode
+        regressor_mode=regressor_mode,
+        backend_dir=backend_dir
     )
     
     # 提取预测数据和组件
@@ -291,8 +293,47 @@ def predict_demand_v2():
     })
 
 
-
-
+@app.route('/api/get_corr_matrix', methods=['GET'])
+def get_corr_matrix():
+    """Get correlation matrix data for visualization"""
+    backend_dir = Path(__file__).parent
+    corr_matrix_path = backend_dir / 'data' / '1_demand_forecasting' / '1_1_corr_matrix.csv'
+    
+    try:
+        corr_matrix = pd.read_csv(corr_matrix_path, index_col=0)
+        
+        # 转换为适合前端使用的格式
+        # 返回矩阵数据和变量列表
+        variables = corr_matrix.index.tolist()
+        
+        # 转换为嵌套数组格式（用于热力图）
+        matrix_data = []
+        for var in variables:
+            row = []
+            for col_var in variables:
+                row.append(float(corr_matrix.loc[var, col_var]))
+            matrix_data.append(row)
+        
+        # 获取与 count 的相关性（用于排序和参考）
+        count_correlations = {}
+        if 'count' in corr_matrix.index:
+            for var in variables:
+                if var != 'count':
+                    count_correlations[var] = float(corr_matrix.loc[var, 'count'])
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'variables': variables,
+                'matrix': matrix_data,
+                'count_correlations': count_correlations  # 与 count 的相关性，用于参考
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to load correlation matrix: {str(e)}'
+        }), 500
 
     
 @app.route('/api/seasonality_heatmap', methods=['GET'])

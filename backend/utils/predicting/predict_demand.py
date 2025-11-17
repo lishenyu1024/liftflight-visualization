@@ -207,12 +207,68 @@ def prophet_predict(data: pd.DataFrame, freq: str = 'M',
                     interval_width: float = 0.95, # 置信区间宽度（越大越宽）
                     regressor_prior_scale: float = 0.05, # 回归变量敏感度（越大越敏感，可能过拟合）
                     regressor_mode: str = 'additive', # 回归变量模式（加法或乘法）
+                    backend_dir: Path = None, # 后端目录路径，用于读取 future 数据
                     ):
     # 分离训练数据和未来数据（有count的用于训练，没有count的用于future）
     train_data = data[data['count'].notna()].copy()  # 只使用有count的数据进行训练
     future_data = data[data['count'].isna()].copy()  # 2024年的数据（没有count）
     prophet_data = train_data[['date', 'count']].copy()
     prophet_data.columns = ['ds', 'y']
+    
+    # 如果需要预测超过一年（periods > 12），读取 future 数据文件
+    if periods > 12 and backend_dir is not None:
+        # 计算需要预测到哪一年
+        # 假设从2024年开始预测，periods=24表示预测24个月（到2025年12月）
+        # 需要的年份：2025, 2026, ..., 2024 + ceil(periods/12) - 1
+        import math
+        last_train_date = prophet_data['ds'].max()
+        start_year = 2024  # 预测起始年份
+        years_needed = math.ceil(periods / 12)  # 需要预测的年数
+        end_year = start_year + years_needed - 1  # 预测结束年份
+        
+        
+        # 计算需要的年份范围（从2025年开始）
+        required_years = list(range(2025, end_year + 1))
+        
+        future_pop_path = backend_dir / 'data' / '1_demand_forecasting' / '1_1_future_pop.csv'
+        if future_pop_path.exists():
+            future_pop_df = pd.read_csv(future_pop_path)
+            # 只筛选需要的年份数据
+            future_pop_df = future_pop_df[
+                future_pop_df['year'].isin(required_years)
+            ].copy()
+            
+            if len(future_pop_df) == 0:
+                raise ValueError(
+                    f"在 future 数据文件中未找到 {required_years} 年的数据。"
+                )
+            
+            # 创建日期列（每月1号）
+            future_pop_df['date'] = pd.to_datetime(
+                future_pop_df[['year', 'month']].assign(day=1)
+            )
+            
+            # 合并到 future_data
+            if len(future_data) > 0:
+                # 如果已有 future_data，合并（只保留 future_data 中 2024 年的数据）
+                future_data_2024 = future_data[
+                    pd.to_datetime(future_data['date']).dt.year == 2024
+                ].copy()
+                future_data = pd.concat([
+                    future_data_2024,
+                    future_pop_df[['date'] + [col for col in future_pop_df.columns if col not in ['date', 'year', 'month', 'NAME', 'state']]]
+                ], ignore_index=True)
+            else:
+                # 如果没有 future_data，直接使用 future_pop_df
+                future_data = future_pop_df[['date'] + [col for col in future_pop_df.columns if col not in ['date', 'year', 'month', 'NAME', 'state']]].copy()
+            
+            # 确保 future_data 中没有 count 列（用于标识未来数据）
+            if 'count' not in future_data.columns:
+                future_data['count'] = pd.NA
+        else:
+            raise FileNotFoundError(
+                f"Future 数据文件不存在: {future_pop_path}"
+            )
     
     # 如果是 logistic growth，需要添加 cap（容量上限）列
     if growth == 'logistic':
@@ -257,7 +313,12 @@ def prophet_predict(data: pd.DataFrame, freq: str = 'M',
         last_future_date = future_data['date'].max()
         months_needed = (last_future_date.year - last_train_date.year) * 12 + \
                        (last_future_date.month - last_train_date.month)
-        periods = max(periods, months_needed)
+        # 如果 periods > 12，使用 future_data 的最大范围；否则只预测指定月数
+        if periods > 12:
+            periods = max(periods, months_needed)
+        else:
+            # 只预测一年，不需要 future_data 中 2025 年及以后的数据
+            periods = min(periods, 12)
     
     # 使用 make_future_dataframe 创建包含历史数据的 future
     future = model.make_future_dataframe(periods=periods, freq=freq)
