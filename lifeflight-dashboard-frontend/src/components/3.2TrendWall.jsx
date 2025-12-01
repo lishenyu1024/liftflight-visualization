@@ -1,5 +1,5 @@
-// 4.2 Trend Wall (Metric Cards + Lines)
-// Chart 4.2: Trend Wall - KPI cards (YTD, YoY) with monthly lines and short forecast tails
+// 3.2 Trend Wall (Metric Cards + Lines)
+// Chart 3.2: Trend Wall - KPI cards (YTD, YoY) with monthly lines and short forecast tails
 //
 // Analysis:
 // This chart displays KPI metric cards showing Year-to-Date (YTD) and Year-over-Year (YoY)
@@ -134,7 +134,7 @@ const TrendWall = () => {
   return (
     <Box m="20px" sx={{ mt: "0px" }}>
       <Typography variant="h3" sx={{ mb: "10px", color: colors.grey[100] }}>
-        4.2 Trend Wall
+        3.2 Trend Wall
       </Typography>
       <Typography variant="h6" sx={{ mb: "10px", color: colors.grey[300] }}>
         Trend Wall - KPI cards (YTD, YoY) with monthly lines and short forecast tails

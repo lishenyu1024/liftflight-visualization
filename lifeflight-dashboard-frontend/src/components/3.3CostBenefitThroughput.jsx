@@ -1,5 +1,5 @@
-// 4.3 Cost–Benefit–Throughput Dual-Axis
-// Chart 4.3: Cost–Benefit–Throughput Dual-Axis - Unit service cost vs. social benefit / revenue
+// 3.3 Cost–Benefit–Throughput Dual-Axis
+// Chart 3.3: Cost–Benefit–Throughput Dual-Axis - Unit service cost vs. social benefit / revenue
 //
 // Analysis:
 // This chart displays unit service cost vs. social benefit/revenue on dual-axis,
@@ -134,7 +134,7 @@ const CostBenefitThroughput = () => {
   return (
     <Box m="20px" sx={{ mt: "0px" }}>
       <Typography variant="h3" sx={{ mb: "10px", color: colors.grey[100] }}>
-        4.3 Cost–Benefit–Throughput Dual-Axis
+        3.3 Cost–Benefit–Throughput Dual-Axis
       </Typography>
       <Typography variant="h6" sx={{ mb: "10px", color: colors.grey[300] }}>
         Cost–Benefit–Throughput Dual-Axis - Unit service cost vs. social benefit / revenue

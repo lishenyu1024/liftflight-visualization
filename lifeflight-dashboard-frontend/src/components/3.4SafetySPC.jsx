@@ -1,5 +1,5 @@
-// 4.4 Safety & Quality SPC Control Charts
-// Chart 4.4: Safety & Quality SPC Control Charts - Incident rates with mean/UCL/LCL
+// 3.4 Safety & Quality SPC Control Charts
+// Chart 3.4: Safety & Quality SPC Control Charts - Incident rates with mean/UCL/LCL
 //
 // Analysis:
 // This chart displays incident rates using Statistical Process Control (SPC) methodology,
@@ -133,7 +133,7 @@ const SafetySPC = () => {
   return (
     <Box m="20px" sx={{ mt: "0px" }}>
       <Typography variant="h3" sx={{ mb: "10px", color: '#000000', fontWeight: 700 }}>
-        4.4 Safety & Quality SPC Control Charts
+        3.4 Safety & Quality SPC Control Charts
       </Typography>
       <Typography variant="h6" sx={{ mb: "10px", color: '#666666', fontWeight: 500 }}>
         Safety & Quality SPC Control Charts - Incident rates with mean/UCL/LCL

@@ -1,5 +1,5 @@
-// 4.1 Core KPI Bullet Charts (Board Summary)
-// Chart 4.1: Core KPI Bullet Charts - Executive-ready visualizations for board presentations
+// 3.1 Core KPI Bullet Charts (Board Summary)
+// Chart 3.1: Core KPI Bullet Charts - Executive-ready visualizations for board presentations
 //
 // Analysis:
 // This chart displays core KPIs using bullet chart style visualization:
@@ -329,7 +329,7 @@ const KPIBullets = () => {
   return (
     <Box m="20px" sx={{ mt: "0px" }}>
       <Typography variant="h3" sx={{ mb: "10px", color: '#000000', fontWeight: 700 }}>
-        4.1 Core KPI Bullet Charts
+        3.1 Core KPI Bullet Charts
       </Typography>
       <Typography variant="h6" sx={{ mb: "10px", color: '#666666', fontWeight: 500 }}>
         Core KPI Bullet Charts - Executive-ready visualizations for board presentations
