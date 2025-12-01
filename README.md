@@ -46,7 +46,7 @@ The platform brings together key external data, including population forecasts, 
 ## Project Structure
 
 ```
-project-fall25-lishenyu1024/
+emergency-demand-intelligence-platform/
 ├── backend/
 │   ├── app.py                 # Flask API server
 │   ├── utils/                 # Utility modules
