@@ -10,8 +10,7 @@ Dan Koloski (Initial Contact), LifeFlight Staff (Eventual Users)
 # Team
 - **Team Lead**: Shenyu Li
 - **Member**: Yantong Guo
-- **Repo**: https://github.com/nudataviz/project-fall25-lishenyu1024
-
+- **Repo**: https://github.com/lishenyu1024/Emergency-Demand-Intelligence-Platform
 # Data
 We will use historical and current **LifeFlight operational data** (including transport volume, patient origin/destination, asset utilization) combined with the following **external data**:
 - **Population data** (historical: 2012–2023, and projections for the next 5–10 years, by county/city)
